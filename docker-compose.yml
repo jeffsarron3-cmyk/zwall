@@ -1,0 +1,26 @@
+services:
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    expose:
+      - "3001"
+    environment:
+      - PORT=3001
+      - NOWNODES_API_KEY=${NOWNODES_API_KEY}
+    env_file:
+      - ./backend/.env        # ignored by git; copy from backend/.env.example
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy

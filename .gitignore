@@ -20,6 +20,9 @@ backend/.env.local
 *.log
 npm-debug.log*
 
+# Docker
+.env.docker
+
 # OS
 .DS_Store
 
