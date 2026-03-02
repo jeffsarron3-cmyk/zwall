@@ -37,6 +37,7 @@ router.post('/broadcast', async (req, res) => {
     const data = await blockchair.broadcastTx(hex)
     res.json(data)
   } catch (err) {
+    console.error('Broadcast error:', err.message)
     res.status(502).json({ error: err.message })
   }
 })

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWallet } from '../context/WalletContext.jsx'
 import { Eye, EyeOff } from '../components/Icons.jsx'
@@ -12,10 +12,9 @@ export default function Unlock() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  if (isUnlocked) {
-    navigate('/dashboard', { replace: true })
-    return null
-  }
+  useEffect(() => {
+    if (isUnlocked) navigate('/dashboard', { replace: true })
+  }, [isUnlocked, navigate])
 
   const handleUnlock = async (e) => {
     e.preventDefault()
@@ -37,22 +36,11 @@ export default function Unlock() {
       <div className="onboarding-center" style={{ gap: 0, maxWidth: 400 }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{
-            width: 72,
-            height: 72,
-            background: 'var(--accent)',
-            borderRadius: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 36,
-            fontWeight: 700,
-            color: 'white',
-            margin: '0 auto 16px',
-            boxShadow: '0 8px 32px rgba(107, 69, 232, 0.35)',
-          }}>
-            Ƶ
-          </div>
+          <img
+            src="https://zodl.com/wp-content/uploads/2026/01/logo-zodl-white.png"
+            alt="ZODL"
+            style={{ height: 40, display: 'block', margin: '0 auto 20px' }}
+          />
           <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, marginBottom: 8 }}>
             Welcome back
           </h1>

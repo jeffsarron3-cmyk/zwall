@@ -5,7 +5,7 @@ import { Eye, EyeOff, User, QrCode, ChevronDown, Search, Info, Settings } from '
 import { ASSETS } from '../data/assets.js'
 
 export default function Pay() {
-  const { wallet, balanceVisible, toggleBalance, showToast } = useWallet()
+  const { balance, zecPrice, balanceVisible, toggleBalance, showToast } = useWallet()
   const [selectedAsset, setSelectedAsset] = useState(ASSETS[0]) // BTC
   const [address, setAddress] = useState('')
   const [amountAsset, setAmountAsset] = useState('')
@@ -42,7 +42,7 @@ export default function Pay() {
   }
 
   const zecSpend = amountUSD
-    ? (parseFloat(amountUSD) / (wallet.zecPrice || 0.12)).toFixed(2)
+    ? (parseFloat(amountUSD) / (zecPrice || 0.12)).toFixed(2)
     : '0'
 
   const isValid = address && amountAsset && parseFloat(amountAsset) > 0
@@ -66,7 +66,7 @@ export default function Pay() {
         {balanceVisible ? (
           <div className="balance-amount" style={{ justifyContent: 'center', fontSize: 44 }}>
             <span className="balance-symbol" style={{ fontSize: 30 }}>Ƶ</span>
-            <span>{wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+            <span>{(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
           </div>
         ) : (
           <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: 8, color: 'var(--text-secondary)' }}>

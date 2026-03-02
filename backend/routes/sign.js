@@ -13,9 +13,8 @@ router.post('/', async (req, res) => {
   try {
     const utxolib = await import('@bitgo/utxo-lib')
     const networks = utxolib.networks || utxolib.default?.networks
-    const TransactionBuilder = utxolib.TransactionBuilder || utxolib.default?.TransactionBuilder
 
-    if (!networks || !TransactionBuilder) {
+    if (!networks) {
       throw new Error('@bitgo/utxo-lib API not found — check version')
     }
 
@@ -36,10 +35,20 @@ router.post('/', async (req, res) => {
     }
     const change = total - amountSat - feeSat
 
-    const txb = new TransactionBuilder(network)
-    txb.setVersion(4)
-    // NU5 / Sapling: versionGroupId for v4 = 0x892F2085
-    if (txb.setVersionGroupId) txb.setVersionGroupId(0x892F2085)
+    // createTransactionBuilderForNetwork produces ZcashTransactionBuilder with
+    // overwintered=1 and versionGroupId=0x892F2085 (Sapling) — required by the node.
+    // new TransactionBuilder(network) produces plain Bitcoin format and gets rejected.
+    const createTxBuilder = utxolib.bitgo?.createTransactionBuilderForNetwork
+      ?? utxolib.default?.bitgo?.createTransactionBuilderForNetwork
+    if (!createTxBuilder) throw new Error('createTransactionBuilderForNetwork not found in @bitgo/utxo-lib')
+    const txb = createTxBuilder(network)
+    // Current Zcash mainnet consensusBranchId.
+    // The node reports the expected value in "old-consensus-branch-id" errors:
+    //   NU5 (May 2022):  0x37519621
+    //   NU6 (Nov 2024):  0xC8E71055
+    //   Current:         0x4DEC4DF0  ← node said "Expected 4dec4df0"
+    // Update this constant whenever a new network upgrade activates.
+    if (txb.setConsensusBranchId) txb.setConsensusBranchId(0x4DEC4DF0)
     if (txb.setExpiryHeight) txb.setExpiryHeight(0)
 
     // Add inputs
@@ -54,15 +63,23 @@ router.post('/', async (req, res) => {
     }
 
     // Sign each input
-    const keyPair = utxolib.ECPair
-      ? utxolib.ECPair.fromWIF(privateKeyWIF, network)
-      : utxolib.default?.ECPair?.fromWIF(privateKeyWIF, network)
+    // ECPair.fromWIF validates network.pubKeyHash as UInt8, but Zcash uses 2-byte
+    // version 7352. Zcash WIF byte (0x80) matches Bitcoin mainnet, so we create
+    // the key pair against the bitcoin network to bypass the typeforce check.
+    const ECPair = utxolib.ECPair ?? utxolib.default?.ECPair
+    if (!ECPair) throw new Error('Could not find ECPair in @bitgo/utxo-lib')
+    const keyPair = ECPair.fromWIF(privateKeyWIF, networks.bitcoin)
 
-    if (!keyPair) throw new Error('Could not create key pair from WIF')
-
+    const SIGHASH_ALL = utxolib.Transaction?.SIGHASH_ALL ?? 1
+    // TxbSignArg (new API) fails for Zcash P2PKH because bitcoinjs-lib rejects the
+    // 2-byte version prefix (0x1CB8). Positional args are the only working path.
+    // Suppress the deprecation warning for this known incompatibility.
+    const _warn = console.warn
+    console.warn = () => {}
     for (let i = 0; i < selected.length; i++) {
-      txb.sign(i, keyPair, null, utxolib.Transaction?.SIGHASH_ALL ?? 1, selected[i].value)
+      txb.sign(i, keyPair, null, SIGHASH_ALL, selected[i].value)
     }
+    console.warn = _warn
 
     const tx = txb.build()
     const hex = tx.toHex()

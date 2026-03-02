@@ -1,8 +1,8 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useWallet } from '../context/WalletContext.jsx'
 import {
   ArrowDown, ArrowUp, ArrowRight, RefreshCw,
-  Settings, Wallet, ChevronDown,
+  Settings, Wallet,
 } from './Icons.jsx'
 
 const NAV = [
@@ -14,8 +14,9 @@ const NAV = [
 ]
 
 export default function Sidebar() {
-  const { wallet } = useWallet()
-  const navigate = useNavigate()
+  const { wallet, balance, zecPrice, balanceVisible } = useWallet()
+  const addr = wallet?.address || ''
+  const addrShort = addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : ''
 
   return (
     <aside style={{
@@ -36,45 +37,30 @@ export default function Sidebar() {
         padding: '24px 20px 20px',
         borderBottom: '1px solid var(--border)',
       }}>
-        <button
-          onClick={() => navigate('/dashboard')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            cursor: 'pointer',
-            width: '100%',
-            padding: '8px 10px',
-            borderRadius: 'var(--radius-md)',
-            transition: 'background var(--transition)',
-            background: 'transparent',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <div style={{
-            width: 34,
-            height: 34,
-            borderRadius: 10,
-            background: 'var(--accent)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: 16,
-            color: 'white',
-            flexShrink: 0,
-          }}>
-            Ƶ
+        <div style={{ padding: '4px 10px' }}>
+          <img
+            src="https://zodl.com/wp-content/uploads/2026/01/logo-zodl-white.png"
+            alt="ZODL"
+            style={{ height: 26, display: 'block', marginBottom: 8 }}
+          />
+          <div style={{ marginBottom: 4 }}>
+            {balanceVisible ? (
+              <>
+                <span style={{ fontSize: 16, fontWeight: 700 }}>
+                  Ƶ {(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                </span>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                  ≈ ${((balance || 0) * (zecPrice || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                </div>
+              </>
+            ) : (
+              <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: 3, color: 'var(--text-muted)' }}>Ƶ ——</span>
+            )}
           </div>
-          <div style={{ flex: 1, textAlign: 'left' }}>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{wallet.name}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-              {wallet.shieldedAddressShort}
-            </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            {addrShort}
           </div>
-          <ChevronDown size={14} />
-        </button>
+        </div>
       </div>
 
       {/* Nav */}

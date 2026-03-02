@@ -1,14 +1,37 @@
 // NOWNodes Zcash Blockbook API — https://zecbook.nownodes.io/api/v2
 const BASE = 'https://zecbook.nownodes.io/api/v2'
 
-async function apiFetch(path) {
+// In-flight deduplication: if the same path is already being fetched, reuse the promise
+const inflight = new Map()
+
+// Short-lived cache: avoids re-fetching the same data within 10 seconds
+const cache = new Map()
+const CACHE_TTL = 10_000
+
+async function apiFetch(path, timeout = 30000) {
+  const now = Date.now()
+  const cached = cache.get(path)
+  if (cached && now - cached.ts < CACHE_TTL) return cached.data
+
+  if (inflight.has(path)) return inflight.get(path)
+
   const { default: fetch } = await import('node-fetch')
-  const res = await fetch(`${BASE}${path}`, {
+  const promise = fetch(`${BASE}${path}`, {
     headers: { 'Api-Key': process.env.NOWNODES_API_KEY || '' },
-    signal: AbortSignal.timeout(12000),
+    signal: AbortSignal.timeout(timeout),
+  }).then(async res => {
+    inflight.delete(path)
+    if (!res.ok) throw new Error(`Blockbook error ${res.status}: ${res.statusText}`)
+    const data = await res.json()
+    cache.set(path, { ts: Date.now(), data })
+    return data
+  }).catch(err => {
+    inflight.delete(path)
+    throw err
   })
-  if (!res.ok) throw new Error(`Blockbook error ${res.status}: ${res.statusText}`)
-  return res.json()
+
+  inflight.set(path, promise)
+  return promise
 }
 
 export async function getBalance(address) {
@@ -58,7 +81,7 @@ export async function broadcastTx(hexTx) {
     method:  'POST',
     headers: { 'Content-Type': 'text/plain', 'Api-Key': process.env.NOWNODES_API_KEY || '' },
     body:    hexTx,
-    signal:  AbortSignal.timeout(15000),
+    signal:  AbortSignal.timeout(30000),
   })
   const json = await res.json()
   if (!res.ok || json.error) throw new Error(json.error || `Broadcast failed (${res.status})`)

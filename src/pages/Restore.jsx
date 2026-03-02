@@ -49,7 +49,7 @@ export default function Restore() {
 
   const handlePaste = (e, startIdx) => {
     const text = e.clipboardData.getData('text')
-    const pasted = text.trim().split(/\s+/)
+    const pasted = text.trim().split(/\s+/).filter(w => !/^\d+$/.test(w))
     if (pasted.length > 1) {
       e.preventDefault()
       const next = [...words]

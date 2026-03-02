@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWallet } from '../context/WalletContext.jsx'
-import { ChevronLeft, Eye, EyeOff, Check } from '../components/Icons.jsx'
+import { ChevronLeft, Eye, EyeOff, Check, Copy } from '../components/Icons.jsx'
 
 const VERIFY_COUNT = 3 // number of words to verify
 
@@ -13,7 +13,7 @@ function pickRandomIndices(n, total) {
 
 export default function Welcome() {
   const navigate = useNavigate()
-  const { newMnemonic, createWallet } = useWallet()
+  const { newMnemonic, createWallet, showToast } = useWallet()
 
   const [step, setStep] = useState('landing') // landing | showSeed | confirmSeed | setPassword
   const [mnemonic, setMnemonic] = useState('')
@@ -76,14 +76,11 @@ export default function Welcome() {
       <div className="onboarding" style={{ background: 'var(--bg-primary)' }}>
         <div className="onboarding-center" style={{ gap: 0 }}>
           <div style={{ marginBottom: 32, textAlign: 'center' }}>
-            <div style={{
-              width: 80, height: 80, background: 'var(--accent)', borderRadius: 24,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 40, fontWeight: 700, color: 'white',
-              margin: '0 auto 20px',
-              boxShadow: '0 8px 32px rgba(107, 69, 232, 0.35)',
-            }}>Ƶ</div>
-            <h1 style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1, marginBottom: 10 }}>ZODL</h1>
+            <img
+              src="https://zodl.com/wp-content/uploads/2026/01/logo-zodl-white.png"
+              alt="ZODL"
+              style={{ height: 48, display: 'block', margin: '0 auto 20px' }}
+            />
             <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 300, margin: '0 auto' }}>
               Zcash-powered web wallet built for financial sovereignty.
             </p>
@@ -147,7 +144,7 @@ export default function Welcome() {
             </div>
           </div>
 
-          <div className="seed-grid" style={{ marginBottom: 24 }}>
+          <div className="seed-grid" style={{ marginBottom: 16 }}>
             {words.map((word, i) => (
               <div key={i} className="seed-cell filled">
                 <span className="seed-num">{i + 1}</span>
@@ -155,6 +152,15 @@ export default function Welcome() {
               </div>
             ))}
           </div>
+
+          <button
+            className="btn btn-secondary"
+            onClick={() => navigator.clipboard.writeText(mnemonic).then(() => showToast('Phrase copied!'))}
+
+            style={{ marginBottom: 12 }}
+          >
+            <Copy size={15} /> Copy phrase
+          </button>
 
           <button
             className="btn btn-primary"

@@ -38,7 +38,7 @@ export default function Dashboard() {
     { label: 'Receive', icon: ArrowDown, path: '/receive', color: '#3DD68C' },
     { label: 'Send',    icon: ArrowUp,   path: '/send',    color: '#E84040' },
     { label: 'Pay',     icon: ArrowRight, path: '/pay',    color: '#F5A623' },
-    { label: 'Swap',    icon: RefreshCw,  path: '/swap',   color: '#6B45E8' },
+    { label: 'Swap',    icon: RefreshCw,  path: '/swap',   color: '#5018DB' },
   ]
 
   return (
@@ -63,12 +63,11 @@ export default function Dashboard() {
         {/* Header row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: 8, background: 'var(--accent)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, fontWeight: 700, color: 'white',
-            }}>Ƶ</div>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>{wallet?.name || 'Zodl'}</span>
+            <img
+              src="https://zodl.com/wp-content/uploads/2026/01/logo-zodl-white.png"
+              alt="ZODL"
+              style={{ height: 20 }}
+            />
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
             <button

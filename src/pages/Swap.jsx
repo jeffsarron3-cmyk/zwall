@@ -5,7 +5,7 @@ import { ArrowUpDown, User, QrCode, ChevronDown, Search, Info, Settings, Check }
 import { ASSETS } from '../data/assets.js'
 
 export default function Swap() {
-  const { wallet, showToast } = useWallet()
+  const { zecPrice, showToast } = useWallet()
   const [fromAsset, setFromAsset] = useState(ASSETS[0]) // BTC
   const [fromAmount, setFromAmount] = useState('')
   const [refundAddress, setRefundAddress] = useState('')
@@ -25,9 +25,9 @@ export default function Swap() {
   const toAmount = useMemo(() => {
     const n = parseFloat(fromAmount)
     if (isNaN(n) || n <= 0) return ''
-    const rate = fromAsset.price / (wallet.zecPrice || 0.12)
+    const rate = fromAsset.price / (zecPrice || 0.12)
     return (n * rate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  }, [fromAmount, fromAsset.price, wallet.zecPrice])
+  }, [fromAmount, fromAsset.price, zecPrice])
 
   const fromUSD = useMemo(() => {
     const n = parseFloat(fromAmount)
@@ -36,9 +36,9 @@ export default function Swap() {
   }, [fromAmount, fromAsset.price])
 
   const rate = useMemo(() => {
-    const r = fromAsset.price / (wallet.zecPrice || 0.12)
+    const r = fromAsset.price / (zecPrice || 0.12)
     return `1 ZEC = ${(1 / r).toFixed(8)} ${fromAsset.symbol}`
-  }, [fromAsset, wallet.zecPrice])
+  }, [fromAsset, zecPrice])
 
   const isValid = fromAmount && parseFloat(fromAmount) > 0
 
