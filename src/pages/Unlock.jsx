@@ -1,43 +1,104 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWallet } from '../context/WalletContext.jsx'
+import { Eye, EyeOff } from '../components/Icons.jsx'
 
 export default function Unlock() {
   const navigate = useNavigate()
   const { unlockWallet, isUnlocked } = useWallet()
 
+  const [password, setPassword] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (isUnlocked) { navigate('/dashboard', { replace: true }); return }
-    // Auto-unlock with empty password (wallets saved without password)
-    unlockWallet('').then(() => {
+    if (isUnlocked) navigate('/dashboard', { replace: true })
+  }, [isUnlocked, navigate])
+
+  const handleUnlock = async (e) => {
+    e.preventDefault()
+    if (!password) { setError('Enter your password'); return }
+    setLoading(true)
+    setError('')
+    try {
+      await unlockWallet(password)
       navigate('/dashboard', { replace: true })
-    }).catch(err => {
-      setError(err.message)
+    } catch (err) {
+      setError(err.message === 'Wrong password' ? 'Wrong password — try again' : err.message)
+    } finally {
       setLoading(false)
-    })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    }
+  }
 
   return (
     <div className="onboarding" style={{ background: 'var(--bg-primary)' }}>
       <div className="onboarding-center" style={{ gap: 0, maxWidth: 400 }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <img
+            src="https://zodl.com/wp-content/uploads/2026/01/logo-zodl-white.png"
+            alt="ZODL"
+            style={{ height: 40, display: 'block', margin: '0 auto 20px' }}
+          />
+          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, marginBottom: 8 }}>
+            Welcome back
+          </h1>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-            {loading ? 'Opening wallet…' : 'Unable to open wallet'}
+            Enter your password to unlock your wallet
           </p>
-          {error && <div style={{ color: 'var(--error)', fontSize: 13, marginTop: 12 }}>⚠ {error}</div>}
         </div>
-        {!loading && (
+
+        <form onSubmit={handleUnlock} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="input-group" style={{ marginBottom: 0 }}>
+            <label className="input-label">Password</label>
+            <div className={`input-wrap ${error ? 'error' : ''}`}>
+              <input
+                type={showPw ? 'text' : 'password'}
+                placeholder="Enter password"
+                value={password}
+                onChange={e => { setPassword(e.target.value); setError('') }}
+                autoFocus
+                autoComplete="current-password"
+              />
+              <div className="input-addon">
+                <button
+                  type="button"
+                  className="input-addon-btn"
+                  onClick={() => setShowPw(v => !v)}
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+            {error && <div className="input-error">⚠ {error}</div>}
+          </div>
+
           <button
+            type="submit"
             className="btn btn-primary"
-            onClick={() => navigate('/')}
-            style={{ fontSize: 15, padding: '14px 24px' }}
+            disabled={loading || !password}
+            style={{ fontSize: 16, padding: '15px 24px' }}
           >
-            Restore from seed phrase
+            {loading ? 'Unlocking…' : 'Unlock Wallet'}
           </button>
-        )}
+        </form>
+
+        <div style={{ marginTop: 28, textAlign: 'center' }}>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              fontSize: 13,
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              transition: 'color var(--transition)',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-light)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+          >
+            Forgot password? Restore from seed phrase
+          </button>
+        </div>
       </div>
     </div>
   )
