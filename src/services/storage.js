@@ -1,10 +1,11 @@
-// AES-GCM encrypted wallet storage using Web Crypto API
-// Password → PBKDF2 → AES-256-GCM key
-// Encrypted blob stored in localStorage as base64
+// Wallet storage with two modes:
+// - Secure context (HTTPS/localhost): AES-GCM encryption via Web Crypto API
+// - Insecure context (HTTP): plain JSON (crypto.subtle unavailable in browsers over HTTP)
 
 const STORAGE_KEY = 'zodl_wallet'
-const SALT_KEY = 'zodl_salt'
 const ITERATIONS = 200_000
+
+const hasCrypto = () => typeof crypto !== 'undefined' && !!crypto.subtle
 
 function bufToB64(buf) {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))
@@ -40,6 +41,12 @@ export function walletExists() {
 }
 
 export async function saveWallet(walletData, password) {
+  if (!hasCrypto()) {
+    // HTTP fallback: store as plain JSON
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ plain: true, data: walletData }))
+    return
+  }
+
   const enc = new TextEncoder()
   const salt = crypto.getRandomValues(new Uint8Array(16))
   const iv = crypto.getRandomValues(new Uint8Array(12))
@@ -47,20 +54,26 @@ export async function saveWallet(walletData, password) {
   const plaintext = enc.encode(JSON.stringify(walletData))
   const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext)
 
-  const payload = {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
     salt: bufToB64(salt.buffer),
     iv: bufToB64(iv.buffer),
     data: bufToB64(ciphertext),
     version: 1,
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+  }))
 }
 
 export async function loadWallet(password) {
   const raw = localStorage.getItem(STORAGE_KEY)
   if (!raw) throw new Error('No wallet found')
 
-  const { salt, iv, data } = JSON.parse(raw)
+  const parsed = JSON.parse(raw)
+
+  // Plain JSON fallback (HTTP or saved without encryption)
+  if (parsed.plain) return parsed.data
+
+  if (!hasCrypto()) throw new Error('Encryption not available — open the app over HTTPS')
+
+  const { salt, iv, data } = parsed
   const key = await deriveKey(password, b64ToBuf(salt))
 
   let plaintext
@@ -79,5 +92,4 @@ export async function loadWallet(password) {
 
 export function clearWallet() {
   localStorage.removeItem(STORAGE_KEY)
-  localStorage.removeItem(SALT_KEY)
 }
