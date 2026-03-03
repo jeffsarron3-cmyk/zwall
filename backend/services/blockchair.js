@@ -8,27 +8,46 @@ const inflight = new Map()
 const cache = new Map()
 const CACHE_TTL = 10_000
 
-async function apiFetch(path, timeout = 30000) {
+const TIMEOUT_MS  = 30_000  // 30s per attempt  (like curl --max-time 30)
+const RETRIES     = 3       // (like curl --retry 3)
+const RETRY_DELAY = 2_000   // 2s between retries (like curl --retry-delay 2)
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+
+async function fetchWithRetry(url, options) {
+  const { default: fetch } = await import('node-fetch')
+  let lastErr
+  for (let attempt = 0; attempt <= RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, { ...options, signal: AbortSignal.timeout(TIMEOUT_MS) })
+      if (!res.ok) throw new Error(`Blockbook ${res.status}: ${res.statusText}`)
+      return await res.json()
+    } catch (err) {
+      lastErr = err
+      if (attempt < RETRIES) await sleep(RETRY_DELAY)
+    }
+  }
+  throw lastErr
+}
+
+async function apiFetch(path) {
   const now = Date.now()
   const cached = cache.get(path)
   if (cached && now - cached.ts < CACHE_TTL) return cached.data
 
   if (inflight.has(path)) return inflight.get(path)
 
-  const { default: fetch } = await import('node-fetch')
-  const promise = fetch(`${BASE}${path}`, {
-    headers: { 'Api-Key': process.env.NOWNODES_API_KEY || '' },
-    signal: AbortSignal.timeout(timeout),
-  }).then(async res => {
-    inflight.delete(path)
-    if (!res.ok) throw new Error(`Blockbook error ${res.status}: ${res.statusText}`)
-    const data = await res.json()
-    cache.set(path, { ts: Date.now(), data })
-    return data
-  }).catch(err => {
-    inflight.delete(path)
-    throw err
-  })
+  const headers = { 'Api-Key': process.env.NOWNODES_API_KEY || '' }
+  const promise = fetchWithRetry(`${BASE}${path}`, { headers })
+    .then(data => {
+      inflight.delete(path)
+      cache.set(path, { ts: Date.now(), data })
+      return data
+    })
+    .catch(err => {
+      inflight.delete(path)
+      throw err
+    })
 
   inflight.set(path, promise)
   return promise
@@ -81,7 +100,7 @@ export async function broadcastTx(hexTx) {
     method:  'POST',
     headers: { 'Content-Type': 'text/plain', 'Api-Key': process.env.NOWNODES_API_KEY || '' },
     body:    hexTx,
-    signal:  AbortSignal.timeout(30000),
+    signal:  AbortSignal.timeout(TIMEOUT_MS),
   })
   const json = await res.json()
   if (!res.ok || json.error) throw new Error(json.error || `Broadcast failed (${res.status})`)
