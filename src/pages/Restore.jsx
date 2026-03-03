@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWallet } from '../context/WalletContext.jsx'
-import { ChevronLeft, Info, Eye, EyeOff } from '../components/Icons.jsx'
+import { ChevronLeft, Info } from '../components/Icons.jsx'
 import { validateMnemonic, validateWord } from '../services/crypto.js'
 
 const TOTAL = 24
@@ -10,17 +10,11 @@ export default function Restore() {
   const navigate = useNavigate()
   const { createWallet } = useWallet()
 
-  const [step, setStep] = useState('words') // words | password
   const [words, setWords] = useState(Array(TOTAL).fill(''))
   const [showInfo, setShowInfo] = useState(false)
   const [birthday, setBirthday] = useState('')
-
-  // Password step
-  const [password, setPassword] = useState('')
-  const [confirmPw, setConfirmPw] = useState('')
-  const [showPw, setShowPw] = useState(false)
-  const [pwError, setPwError] = useState('')
   const [restoring, setRestoring] = useState(false)
+  const [restoreError, setRestoreError] = useState('')
 
   const filled = words.filter(Boolean).length
   const allFilled = filled === TOTAL
@@ -61,80 +55,15 @@ export default function Restore() {
   }
 
   const handleRestore = async () => {
-    if (password.length < 8) { setPwError('Password must be at least 8 characters'); return }
-    if (password !== confirmPw) { setPwError('Passwords do not match'); return }
     setRestoring(true)
-    setPwError('')
+    setRestoreError('')
     try {
-      await createWallet(words, password, 'Restored Wallet')
+      await createWallet(words, '', 'Restored Wallet')
       navigate('/dashboard', { replace: true })
     } catch (err) {
-      setPwError(err.message)
+      setRestoreError(err.message)
       setRestoring(false)
     }
-  }
-
-  // ── Step: password ─────────────────────────────────────────────
-  if (step === 'password') {
-    return (
-      <div className="onboarding">
-        <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 24px 80px', width: '100%' }}>
-          <div className="page-header" style={{ marginBottom: 32 }}>
-            <button className="btn-icon" onClick={() => setStep('words')}><ChevronLeft /></button>
-            <span className="page-title">Set Password</span>
-            <div style={{ width: 36 }} />
-          </div>
-
-          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Protect your wallet</h2>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 28, lineHeight: 1.6 }}>
-            This password encrypts your recovered wallet locally.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div className="input-group" style={{ marginBottom: 0 }}>
-              <label className="input-label">Password</label>
-              <div className="input-wrap">
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  placeholder="Min. 8 characters"
-                  value={password}
-                  onChange={e => { setPassword(e.target.value); setPwError('') }}
-                  autoFocus
-                  autoComplete="new-password"
-                />
-                <div className="input-addon">
-                  <button type="button" className="input-addon-btn" onClick={() => setShowPw(v => !v)}>
-                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="input-group" style={{ marginBottom: 0 }}>
-              <label className="input-label">Confirm Password</label>
-              <div className={`input-wrap ${pwError ? 'error' : ''}`}>
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  placeholder="Repeat password"
-                  value={confirmPw}
-                  onChange={e => { setConfirmPw(e.target.value); setPwError('') }}
-                  autoComplete="new-password"
-                />
-              </div>
-              {pwError && <div className="input-error">⚠ {pwError}</div>}
-            </div>
-          </div>
-
-          <button
-            className="btn btn-primary"
-            onClick={handleRestore}
-            disabled={restoring || !password || !confirmPw}
-            style={{ marginTop: 28, fontSize: 16, padding: '16px 24px' }}
-          >
-            {restoring ? 'Restoring wallet…' : 'Restore Wallet'}
-          </button>
-        </div>
-      </div>
-    )
   }
 
   // ── Step: words ────────────────────────────────────────────────
@@ -237,13 +166,19 @@ export default function Restore() {
           </div>
         )}
 
+        {restoreError && (
+          <div style={{ color: 'var(--error)', fontSize: 13, marginBottom: 12 }}>
+            ⚠ {restoreError}
+          </div>
+        )}
+
         <button
           className="btn btn-primary"
-          disabled={!mnemonicValid}
-          onClick={() => setStep('password')}
+          disabled={!mnemonicValid || restoring}
+          onClick={handleRestore}
           style={{ fontSize: 16, padding: '16px 24px' }}
         >
-          Next
+          {restoring ? 'Restoring wallet…' : 'Restore Wallet'}
         </button>
       </div>
     </div>
